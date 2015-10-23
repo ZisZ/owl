@@ -36,11 +36,14 @@ Initialize Django
 # Configuration
 Collector configuration
 
-Modify collector.cfg in config to change configuration for monitor
+Modify collector.cfg in config to change configuration for collector
 
     [collector]
     # service name(space seperated)
     service = hdfs hbase
+    period=30
+    # this address must be (or will be) able to access the owl server
+    owl_server_url=http://127.0.0.1:8000
     
     [hdfs] 
     # cluster name(space seperated)
