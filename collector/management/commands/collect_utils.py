@@ -1,5 +1,6 @@
 
 METRIC_TASK_TYPE = "Metric"
+METRIC_TSDB_TASK_TYPE = "Metric-Tsdb"
 STATUS_TASK_TYPE = "Status"
 AGGREGATE_TASK_TYPE = "Aggregate"
 

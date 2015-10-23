@@ -35,14 +35,16 @@ import gc
 from metrics_updater import update_metrics_in_process
 from status_updater import update_status_in_process
 from metrics_aggregator import aggregate_region_operation_metric_in_process
+from metrics_tsdb_sender import send_metrics_to_tsdb
 from collect_utils import QueueTask
-from collect_utils import METRIC_TASK_TYPE, STATUS_TASK_TYPE, AGGREGATE_TASK_TYPE
+from collect_utils import METRIC_TASK_TYPE, METRIC_TSDB_TASK_TYPE, STATUS_TASK_TYPE, AGGREGATE_TASK_TYPE
 
 # the number of multiprocesses
 PROCESS_NUM = 6
 
 QUEUE_TASK_CALLBACK = {
   METRIC_TASK_TYPE: update_metrics_in_process,
+  METRIC_TSDB_TASK_TYPE: send_metrics_to_tsdb,
   STATUS_TASK_TYPE: update_status_in_process,
   AGGREGATE_TASK_TYPE: aggregate_region_operation_metric_in_process, 
 }
@@ -89,6 +91,7 @@ class CollectorConfig:
       self.services[service_name] = CollectorConfig.Service(options,
         self.config, service_name)
     self.period = self.config.getint("collector", "period")
+    self.owl_server_url = self.config.get("collector", "owl_server_url")
 
   def parse_config_file(self, config_path):
     config_parser = ConfigParser.SafeConfigParser()
@@ -160,6 +163,45 @@ class MetricSource:
     except Exception as e:
       logger.warning("%r failed to process error: %r", self.task, e)
       self.schedule_next_fetch(input_queue)
+
+class MetricTsdbSender:
+  """
+  Get current metrics and send them to tsdb.
+  """
+  def __init__(self, collector_config):
+    self.collector_config = collector_config
+    self.period = int(collector_config.period * 2)
+    self.url = str(os.path.join(collector_config.owl_server_url, "monitor/metrics"))
+
+  def schedule_next_send(self, input_queue):
+    next_time = self.start_time + self.period
+    end_time = time.time()
+    if end_time < next_time:
+      wait_time = next_time - end_time
+      reactor.callFromThread(reactor.callLater, wait_time,
+        self.fetch_metrics, input_queue)
+    else:
+      reactor.callFromThread(self.fetch_metrics, input_queue)
+
+  def fetch_metrics(self, input_queue):
+    logger.info("fetching %s ...", self.url)
+    self.start_time = time.time()
+    client.getPage(self.url, timeout=self.collector_config.period - 1).addCallbacks(
+      callback=self.success_callback, errback=self.error_callback,
+      callbackArgs=[input_queue], errbackArgs=[input_queue])
+
+  def success_callback(self, data, input_queue):
+    logger.info("spent %f seconds for fetching metrics from owl",
+      time.time() - self.start_time)
+    try:
+      input_queue.put(QueueTask(METRIC_TSDB_TASK_TYPE, data))
+    except Exception as e:
+      logger.warning("failed to process result: %r", e)
+      self.schedule_next_send(input_queue)
+
+  def error_callback(self, error, input_queue):
+    logger.warning("failed to fetch %s: %r", (self.url, error))
+    self.schedule_next_send(input_queue)
 
 # Region operation include : get, multiput, multidelete, checkAndPut, BulkDelete etc.
 # one region operation include operation_NumOps, operation_AvgTime, operation_MaxTime and
@@ -310,6 +352,8 @@ class Command(BaseCommand):
         if queue_task.task_type == METRIC_TASK_TYPE:
           metric_source_id = queue_task.task_data
           self.metric_sources[metric_source_id].schedule_next_fetch(self.input_queue)
+        elif queue_task.task_type == METRIC_TSDB_TASK_TYPE:
+          self.metric_tsdb_sender.schedule_next_send(self.input_queue)
         elif queue_task.task_type == STATUS_TASK_TYPE:
           self.status_updater.schedule_next_status_update(self.input_queue)
         elif queue_task.task_type == AGGREGATE_TASK_TYPE:
@@ -337,6 +381,11 @@ class Command(BaseCommand):
       logger.info("%r waiting %f seconds for %s..." ,
         metric_source.task, wait_time, metric_source.url)
       reactor.callLater(wait_time, metric_source.fetch_metrics, self.input_queue)
+
+    # start to send metrics to tsdb
+    self.metric_tsdb_sender = MetricTsdbSender(self.collector_config)
+    reactor.callLater(self.collector_config.period * 2,
+      self.metric_tsdb_sender.fetch_metrics, self.input_queue)
   
     # schedule next fetch for metrics updating
     reactor.callLater(self.collector_config.period - 2, self.schedule_next_rolling)
