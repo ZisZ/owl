@@ -231,7 +231,7 @@ class Command(BaseCommand):
   )
 
   def handle(self, *args, **options):
-    gc.set_debug(gc.DEBUG_STATS)
+    #gc.set_debug(gc.DEBUG_STATS)
 
     self.args = args
     self.options = options
