@@ -4,7 +4,7 @@ import logging
 import os
 import time
 
-from collect_utils import METRIC_TASK_TYPE, STATUS_TASK_TYPE, AGGREGATE_TASK_TYPE
+from collect_utils import STATUS_TASK_TYPE
 from collect_utils import QueueTask
 from django.utils import timezone
 from monitor.models import Cluster

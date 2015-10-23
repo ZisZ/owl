@@ -10,7 +10,7 @@ import traceback
 from opentsdb_sender import TSDBSender
 from django.conf import settings
 
-from collect_utils import METRIC_TASK_TYPE, METRIC_TSDB_TASK_TYPE, STATUS_TASK_TYPE, AGGREGATE_TASK_TYPE
+from collect_utils import METRIC_TSDB_TASK_TYPE
 from collect_utils import QueueTask
 
 sender = TSDBSender(settings.TSDB_ADDR)

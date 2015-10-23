@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 
-from collect_utils import METRIC_TASK_TYPE, STATUS_TASK_TYPE, AGGREGATE_TASK_TYPE
+from collect_utils import AGGREGATE_TASK_TYPE
 from collect_utils import QueueTask
 
 from monitor import dbutil

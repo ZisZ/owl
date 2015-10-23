@@ -7,9 +7,8 @@ import socket
 import time
 import traceback
 
-from collect_utils import METRIC_TASK_TYPE, STATUS_TASK_TYPE, AGGREGATE_TASK_TYPE
+from collect_utils import METRIC_TASK_TYPE
 from collect_utils import QueueTask
-from django.db import connection
 from monitor import dbutil
 from monitor import metric_helper
 from monitor.models import Region, RegionServer, Table, HBaseCluster
