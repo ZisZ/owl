@@ -25,7 +25,13 @@
         <tbody>
         {% for task in tasks %}
             <tr>
-                <td><a href="/monitor/job/{{ task.job.id }}">{{ task.job.name }}</a></td>
+                <td>
+                    {% if task.job.name == "datanode" %}
+                        <a href="/monitor/task/{{ task.id }}">{{ task.job.name }}</a>
+                    {% else %}
+                        <a href="/monitor/job/{{ task.job.id }}">{{ task.job.name }}</a>
+                    {% endif %}
+                </td>
                 <td><a href="/monitor/task/{{ task.id }}">{{ task.task_id }}</a></td>
                 <td><a href="http://{{ task.host }}:{{ task.port }}/">{{ task.host }}:{{ task.port }}</a></td>
                 <td>{{ task.last_success_time }}
