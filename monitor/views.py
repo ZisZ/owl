@@ -70,6 +70,8 @@ def show_cluster_task_board(request, id):
             'tasks': tasks}
   if cluster.service.name == 'hdfs':
     return respond(request, 'monitor/hdfs_task_board.html', params)
+  elif cluster.service.name == 'yarn':
+    return respond(request, 'monitor/yarn_task_board.html', params)
   elif cluster.service.name == 'hbase':
     return respond(request, 'monitor/hbase_task_board.html', params)
   else:
