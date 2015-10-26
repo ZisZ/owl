@@ -119,29 +119,22 @@ def update_hbase_cluster_status(cluster):
   cluster.last_status = max([job.last_status for job in cluster.jobs.itervalues()])
 
 def update_yarn_cluster_status(cluster):
-  job = cluster.jobs["resourcemanager"]
-  for task in job.running_tasks.itervalues():
-    # update cluster entry
-    cluster.entry = '%s:%d' % (task.host, task.port)
-  if job.running_tasks_count < 1:
-    job.last_status = Status.ERROR
-    job.last_message = "No running resourcemanager!"
-
-  job = cluster.jobs["proxyserver"]
-  if job.running_tasks_count < 1:
-    job.last_status = Status.ERROR
-    job.last_message = "No running proxyserver!"
-
-  job = cluster.jobs["nodemanager"]
-  if job.running_tasks_count < 3:
-    job.last_status = Status.ERROR
-    job.last_message = "Too few running nodemanager!"
-  cluster.last_status = max([job.last_status for job in cluster.jobs.itervalues()])
-
-  job = cluster.jobs["historyserver"]
-  if job.running_tasks_count < 1:
-    job.last_status = Status.ERROR
-    job.last_message = "Too few running historyserver!"
+  for job in cluster.jobs.itervalues():
+    if job.name == "resourcemanager":
+      for task in job.running_tasks.itervalues():
+        # update cluster entry
+        cluster.entry = '%s:%d' % (task.host, task.port)
+      if job.running_tasks_count < 1:
+        job.last_status = Status.ERROR
+        job.last_message = "No running resourcemanager!"
+    elif job.name == "nodemanager":
+      if job.running_tasks_count < 3:
+        job.last_status = Status.ERROR
+        job.last_message = "Too few running nodemanager!"
+    else:
+      if job.running_tasks_count < 1:
+        job.last_status = Status.ERROR
+        job.last_message = "No running %s!" % job.name
   cluster.last_status = max([job.last_status for job in cluster.jobs.itervalues()])
 
 def update_impala_cluster_status(cluster):
